@@ -1,4 +1,4 @@
-
+#include <algorithm>
 #include <iostream>
 #include <string>
 
@@ -18,6 +18,7 @@ class BST {
     void reverse(Node *head);  // removes BST property!
     unsigned int size;
     void removeAll(Node *head);
+    unsigned int getHeight(Node *head);
 
    public:
     BST();
@@ -29,6 +30,7 @@ class BST {
     void print();
     void reverse();  // removes BST property!
     inline unsigned int getSize() { return size; }
+    unsigned int getHeight();
 };
 
 template <typename T>
@@ -69,6 +71,7 @@ void BST<T>::removeAll(Node *head) {
 
     if (nullptr == head->left && nullptr == head->right) {
         delete head;
+        return;
     } else {
         removeAll(head->left);
         removeAll(head->right);
@@ -154,6 +157,15 @@ void BST<T>::reverse(Node *head) {
 }
 
 template <typename T>
+unsigned int BST<T>::getHeight(Node *head) {
+    if (nullptr == head) {
+        return 0;
+    }
+
+    return 1 + std::max(getHeight(head->left), getHeight(head->right));
+}
+
+template <typename T>
 void BST<T>::print(Node *head) {
     if (nullptr == head) return;
     print(head->left);
@@ -184,6 +196,12 @@ void BST<T>::reverse() {
 }
 
 template <typename T>
+unsigned int BST<T>::getHeight() {
+    // can also do ceil(log2(size))
+    return getHeight(root);
+}
+
+template <typename T>
 void BST<T>::print() {
     print(root);
 }
@@ -203,4 +221,6 @@ int main() {
 
     bst.reverse();
     bst.print();
+
+    std::cout << bst.getHeight() << std::endl;
 }
