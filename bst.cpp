@@ -1,226 +1,124 @@
-#include <algorithm>
+/*
+    Hash table with open hashing
+*/
+
+#include <cassert>
 #include <iostream>
 #include <string>
+#include <vector>
 
 #define SPACE_OUTPUT std::cout << "---" << std::endl;
+#define MAX_BUCKETS 10000
 
-template <typename T>
-class BST {
+enum Status {
+    EMPTY,
+    ACTIVE,
+    ZOMBIE,
+};
+
+struct Node {
+    std::string val;
+    Status status;
+};
+
+class HashTable {
    private:
-    struct Node;
-    Node *root;
-    Node *createNode(T data);
-    Node *insert(Node *head, T data);
-    Node *remove(Node *head, T data);
-    bool has(Node *head, T data);
-    void print(Node *head);
-    T findMinimumValue(Node *head);
-    void reverse(Node *head);  // removes BST property!
-    unsigned int size;
-    void removeAll(Node *head);
-    unsigned int getHeight(Node *head);
+    std::vector<Node> table;
+    int hash(std::string str);
+    int activeElements;
+    int getSlot(std::string val);
 
    public:
-    BST();
-    BST(T data);
-    virtual ~BST();
-    void insert(T data);
-    void remove(T data);
-    bool has(T data);
+    HashTable();
+    virtual ~HashTable();
+    void insert(std::string val);
+    bool has(std::string val);
+    void remove(std::string val);
     void print();
-    void reverse();  // removes BST property!
-    inline unsigned int getSize() { return size; }
-    unsigned int getHeight();
 };
 
-template <typename T>
-struct BST<T>::Node {
-    T data;
-    Node *left;
-    Node *right;
-};
+HashTable::HashTable() {
+    table.resize(MAX_BUCKETS);
+    activeElements = 0;
 
-template <typename T>
-typename BST<T>::Node *BST<T>::createNode(T data) {
-    BST<T>::Node *node = new Node();
-    node->left = node->right = nullptr;
-    node->data = data;
-    return node;
-}
-
-template <typename T>
-T BST<T>::findMinimumValue(Node *head) {
-    if (nullptr == head->left) {
-        return head->data;
-    } else {
-        return findMinimumValue(head->left);
+    for (int i = 0; i < table.size(); i++) {
+        table[i].status = EMPTY;
     }
 }
 
-template <typename T>
-BST<T>::BST() : root(nullptr) {}
+HashTable::~HashTable() {}
 
-template <typename T>
-BST<T>::BST(T data) : root(createNode(data)) {}
-
-template <typename T>
-void BST<T>::removeAll(Node *head) {
-    if (nullptr == head) {
-        return;
+// naive hash
+int HashTable::hash(std::string str) {
+    int hsh = 0;
+    for (auto &c : str) {
+        hsh += c;
     }
-
-    if (nullptr == head->left && nullptr == head->right) {
-        delete head;
-        return;
-    } else {
-        removeAll(head->left);
-        removeAll(head->right);
-    }
-
-    delete head;
+    return hsh % MAX_BUCKETS;
 }
 
-template <typename T>
-BST<T>::~BST() {
-    removeAll(root);
+int HashTable::getSlot(std::string val) {
+    int slot = hash(val);
+
+    for (int i = 0; i < MAX_BUCKETS; i++) {
+        if (EMPTY == table[slot].status) {
+            return -1;
+        } else if (ACTIVE == table[slot].status && val == table[slot].val) {
+            return slot;
+        }
+
+        slot = (slot + 1) % MAX_BUCKETS;
+    }
+
+    return -1;
 }
 
-template <typename T>
-typename BST<T>::Node *BST<T>::insert(Node *head, T data) {
-    if (nullptr == head) {
-        return createNode(data);
+void HashTable::insert(std::string val) {
+    assert(activeElements < MAX_BUCKETS);
+
+    int slot = hash(val);
+
+    while (ACTIVE == table[slot].status) {
+        slot = (slot + 1) % MAX_BUCKETS;
     }
 
-    if (data < head->data) {
-        head->left = insert(head->left, data);
-    } else {
-        head->right = insert(head->right, data);
-    }
-
-    return head;
+    table[slot].status = ACTIVE;
+    table[slot].val = val;
+    activeElements++;
 }
 
-template <typename T>
-typename BST<T>::Node *BST<T>::remove(Node *head, T data) {
-    if (nullptr == head) {
-        return nullptr;
-    }
-    if (data < head->data) {
-        head->left = remove(head->left, data);
-    } else if (data > head->data) {
-        head->right = remove(head->right, data);
-    } else {
-        if (nullptr == head->left && nullptr == head->right) {
-            return nullptr;
-        } else if (nullptr == head->left) {
-            Node *temp = head->right;
-            delete head;
-            return temp;
-        } else if (nullptr == head->right) {
-            Node *temp = head->left;
-            delete head;
-            return temp;
-        } else {
-            Node *minOnRightSubtree = createNode(findMinimumValue(head));
-            head->data = minOnRightSubtree->data;
-            head->right = remove(head->right, minOnRightSubtree->data);
+bool HashTable::has(std::string val) { return getSlot(val) != -1; }
+
+void HashTable::remove(std::string val) {
+    int slot = getSlot(val);
+    if (-1 == slot) return;
+    table[slot].status = ZOMBIE;
+    activeElements--;
+}
+
+void HashTable::print() {
+    for (int i = 0; i < MAX_BUCKETS; i++) {
+        if (ACTIVE == table[i].status) {
+            std::cout << "[" << i << "]: " << table[i].val << std::endl;
         }
     }
-
-    return head;
-}
-
-template <typename T>
-bool BST<T>::has(Node *head, T data) {
-    if (nullptr == head) return false;
-    if (head->data == data)
-        return true;
-    else if (data < head->data) {
-        return has(head->left, data);
-    } else {
-        return has(head->right, data);
-    }
-}
-
-template <typename T>
-void BST<T>::reverse(Node *head) {
-    if (nullptr == head) {
-        return;
-    }
-
-    Node *temp = head->left;
-    head->left = head->right;
-    head->right = temp;
-
-    reverse(head->left);
-    reverse(head->right);
-}
-
-template <typename T>
-unsigned int BST<T>::getHeight(Node *head) {
-    if (nullptr == head) {
-        return 0;
-    }
-
-    return 1 + std::max(getHeight(head->left), getHeight(head->right));
-}
-
-template <typename T>
-void BST<T>::print(Node *head) {
-    if (nullptr == head) return;
-    print(head->left);
-    std::cout << head->data << std::endl;
-    print(head->right);
-}
-
-template <typename T>
-void BST<T>::insert(T data) {
-    size++;
-    root = insert(root, data);
-}
-
-template <typename T>
-void BST<T>::remove(T data) {
-    size--;
-    root = remove(root, data);
-}
-
-template <typename T>
-bool BST<T>::has(T data) {
-    has(root, data);
-}
-
-template <typename T>
-void BST<T>::reverse() {
-    reverse(root);
-}
-
-template <typename T>
-unsigned int BST<T>::getHeight() {
-    // can also do ceil(log2(size))
-    return getHeight(root);
-}
-
-template <typename T>
-void BST<T>::print() {
-    print(root);
 }
 
 int main() {
-    BST<std::string> bst;
-    bst.insert("Hello");
-    bst.insert("ABC");
-    bst.insert("DEF");
-    bst.insert("Another word");
-    bst.insert("Coolio");
-    bst.remove("lmao");
-    bst.remove("Coolio");
-    bst.print();
+    HashTable ht;
+    ht.insert("Hello");
+    ht.insert("Macbook");
+    ht.insert("Starbucks");
+    ht.insert("Bottle");
+    ht.insert("Phone");
+    ht.insert("Bitcoin");
+    ht.print();
 
     SPACE_OUTPUT
+    ht.remove("Hello");
+    ht.remove("Starbucks");
+    ht.remove("Nothing");
+    ht.print();
 
-    bst.reverse();
-    bst.print();
-
-    std::cout << bst.getHeight() << std::endl;
+    return 0;
 }
