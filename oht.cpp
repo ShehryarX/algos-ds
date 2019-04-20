@@ -7,6 +7,7 @@
 #include <string>
 #include <vector>
 
+#define SPACE_OUTPUT std::cout << "---" << std::endl;
 #define MAX_BUCKETS 10000
 
 enum Status {
@@ -48,7 +49,7 @@ HashTable::HashTable() {
 HashTable::~HashTable() {}
 
 // naive hash
-int hash(std::string str) {
+int HashTable::hash(std::string str) {
     int hsh = 0;
     for (auto &c : str) {
         hsh += c;
@@ -77,7 +78,7 @@ void HashTable::insert(std::string val) {
 
     int slot = hash(val);
 
-    while (ZOMBIE != table[slot].status && ACTIVE != table[slot].status) {
+    while (ACTIVE == table[slot].status) {
         slot = (slot + 1) % MAX_BUCKETS;
     }
 
@@ -101,4 +102,24 @@ void HashTable::print() {
             std::cout << "[" << i << "]: " << table[i].val << std::endl;
         }
     }
+}
+
+int main() {
+    HashTable ht;
+    ht.insert("Hello");
+    ht.insert("Macbook");
+    ht.insert("Starbucks");
+    ht.insert("Bottle");
+    ht.insert("Phone");
+    ht.insert("Bitcoin");
+    ht.print();
+
+    SPACE_OUTPUT
+        
+    ht.remove("Hello");
+    ht.remove("Starbucks");
+    ht.remove("Nothing");
+    ht.print();
+
+    return 0;
 }
